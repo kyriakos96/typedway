@@ -1,5 +1,9 @@
 package io.busyhive.typedway
 
+import java.io.File
+
+import io.busyhive.typedway.migrationmanagement.MigrationManager
+import io.busyhive.typedway.utils.FileRetrieval
 import slick.jdbc.MySQLProfile.api._
 import slick.migration.api._
 import slick.migration.api.flyway._
@@ -11,27 +15,37 @@ object Migrator extends Greeting with App {
 
   val db = Database.forConfig("mysql")
 
-  class TestTable(tag: Tag) extends Table[(Int, Int)](tag, "testtable") {
-    val col1 = column[Int]("col1")
-    val col2 = column[Int]("col2")
-    def * = (col1, col2)
-  }
-  val testTable = TableQuery[TestTable]
-
-  implicit val dialect: MySQLDialect = new MySQLDialect
-
-  val m1 = TableMigration(testTable).create
-    .addColumns(_.col1, _.col2)
-
-  val m2 = SqlMigration("insert into testtable (col1, col2) values (2, 2)")
+//  val m2 = SqlMigration("insert into testtable (col1, col2) values (2, 2)")
+//
 
   implicit val infoProvider: MigrationInfo.Provider[Migration] =
     MigrationInfo.Provider.strict
 
-  val migration = VersionedMigration("1", m1 & m2)
+  // TODO: Iterate mirgation scripts
+
+  val baseDir = "./src/main/scala/io/busyhive/typedway/db"
+  val schemas = FileRetrieval.getListOfSubDirectories(new File(baseDir))
+
+  val migrationFiles = schemas.foldLeft(Seq[MigrationManager]()) {
+    (acc, schema) =>
+      val schemaMigrationFiles =
+        FileRetrieval.getListOfFilesInDirectory(s"${schema.getPath}/migrations")
+      acc ++ schemaMigrationFiles.map(
+        migrationFile =>
+          MigrationManager(migrationFile.getName.replace(".scala", ""),
+                           schema.getName,
+                           true))
+
+  }
+
+  val migrations =
+    migrationFiles.map(migrationFile =>
+      VersionedMigration(migrationFile.getVersion, migrationFile.dbMigration))
+
+  println(migrations)
 
   val flyway =
-    SlickFlyway(db)(Seq(migration))
+    SlickFlyway(db)(migrations)
       .load()
 
   flyway.migrate()

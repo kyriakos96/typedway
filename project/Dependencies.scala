@@ -8,5 +8,5 @@ object Dependencies {
   lazy val slick = "com.typesafe.slick" %% "slick" % ProjectLibraryVersion.slickVersion
   lazy val slf4jNop = "org.slf4j" % "slf4j-nop" % ProjectLibraryVersion.slf4jNopVersion
   lazy val slickHikaricp = "com.typesafe.slick" %% "slick-hikaricp" % ProjectLibraryVersion.slickHikaricpVersion
-
+  lazy val scalaReflect = "org.scala-lang" % "scala-reflect" % ProjectLibraryVersion.scalaVersion
 }

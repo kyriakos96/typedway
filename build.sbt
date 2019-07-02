@@ -16,7 +16,8 @@ lazy val root = (project in file("."))
       slick,
       slickMigrationApiFlyway,
       slf4jNop,
-      slickHikaricp
+      slickHikaricp,
+      scalaReflect
     )
   )
 
