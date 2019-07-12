@@ -1,57 +1,46 @@
 package io.busyhive.typedway
 
-import java.io.File
-
+import io.busyhive.typedway.common.{Configuration, DbConfiguration, TypedwayCli}
 import io.busyhive.typedway.migrationmanagement.MigrationManager
-import io.busyhive.typedway.utils.FileRetrieval
 import slick.jdbc.MySQLProfile.api._
 import slick.migration.api._
 import slick.migration.api.flyway._
+import com.typesafe.scalalogging.StrictLogging
 
-//import scala.concurrent.ExecutionContext.Implicits.global
+class Migrator(args: TypedwayCli) extends Configuration with StrictLogging {
 
-object Migrator extends Greeting with App {
-  println(greeting)
+  override def environment: String = args.environment
 
-  val db = Database.forConfig("mysql")
+  val dbConfig = DbConfiguration.prepareConfiguration(config)
+  val db = Database.forURL(dbConfig.url, dbConfig.driver)
 
-//  val m2 = SqlMigration("insert into testtable (col1, col2) values (2, 2)")
-//
+  def migrate: Unit = {
+    implicit val infoProvider: MigrationInfo.Provider[Migration] =
+      MigrationInfo.Provider.strict
 
-  implicit val infoProvider: MigrationInfo.Provider[Migration] =
-    MigrationInfo.Provider.strict
+    val migrations = MigrationManager.getAllMigrations
 
-  // TODO: Iterate mirgation scripts
+    val flyway =
+      SlickFlyway(db)(migrations)
+        .load()
 
-  val baseDir = "./src/main/scala/io/busyhive/typedway/db"
-  val schemas = FileRetrieval.getListOfSubDirectories(new File(baseDir))
-
-  val migrationFiles = schemas.foldLeft(Seq[MigrationManager]()) {
-    (acc, schema) =>
-      val schemaMigrationFiles =
-        FileRetrieval.getListOfFilesInDirectory(s"${schema.getPath}/migrations")
-      acc ++ schemaMigrationFiles.map(
-        migrationFile =>
-          MigrationManager(migrationFile.getName.replace(".scala", ""),
-                           schema.getName,
-                           true))
-
+    flyway.migrate()
   }
-
-  val migrations =
-    migrationFiles.map(migrationFile =>
-      VersionedMigration(migrationFile.getVersion, migrationFile.dbMigration))
-
-  println(migrations)
-
-  val flyway =
-    SlickFlyway(db)(migrations)
-      .load()
-
-  flyway.migrate()
 
 }
 
-trait Greeting {
-  lazy val greeting: String = "hello"
+object Migrator extends App with StrictLogging {
+
+  import io.busyhive.typedway.common.TypedwayCli._
+
+  argumentsParser.parse(args, TypedwayCli()) match {
+    case Some(arguments) =>
+      logger.info(s"Arguments: $arguments")
+      val typedwayMigrator = new Migrator(arguments)
+      typedwayMigrator.migrate
+    case None =>
+      logger.error("No arguments provided")
+      sys.error("No arguments provided")
+  }
+
 }

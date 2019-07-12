@@ -1,6 +1,10 @@
 package io.busyhive.typedway.migrationmanagement
 
+import java.io.File
+
+import io.busyhive.typedway.utils.FileRetrieval
 import slick.migration.api.Migration
+import slick.migration.api.flyway.{MigrationInfo, VersionedMigration}
 
 class MigrationManager(migrationFileName: String,
                        schema: String,
@@ -39,4 +43,34 @@ object MigrationManager {
             isMigration: Boolean): MigrationManager =
     new MigrationManager(migrationFileName, schema, isMigration)
 
+  def getAllMigrations: Seq[VersionedMigration[String]] = {
+    val schemas = getMigrationSchemas
+    val migrationFiles = getMigrationScripts(schemas)
+
+    implicit val infoProvider: MigrationInfo.Provider[Migration] =
+      MigrationInfo.Provider.strict
+
+    migrationFiles.map(migrationFile =>
+      VersionedMigration(migrationFile.getVersion, migrationFile.dbMigration))
+  }
+
+  private def getMigrationSchemas: Seq[File] = {
+    val baseDir = "./src/main/scala/io/busyhive/typedway/db"
+    FileRetrieval.getListOfSubDirectories(new File(baseDir))
+  }
+
+  private def getSchemaMigrationScripts(schema: File): Seq[MigrationManager] = {
+    val schemaMigrationFiles =
+      FileRetrieval.getListOfFilesInDirectory(s"${schema.getPath}/migrations")
+    schemaMigrationFiles.map(
+      migrationFile =>
+        MigrationManager(migrationFile.getName.replace(".scala", ""),
+                         schema.getName,
+                         isMigration = true))
+  }
+
+  private def getMigrationScripts(schemas: Seq[File]): Seq[MigrationManager] =
+    schemas.foldLeft(Seq[MigrationManager]()) { (acc, schema) =>
+      acc ++ getSchemaMigrationScripts(schema)
+    }
 }

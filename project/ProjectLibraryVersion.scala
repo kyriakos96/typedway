@@ -15,4 +15,8 @@ object ProjectLibraryVersion {
   val slickHikaricpVersion = "3.3.2"
 
   val slf4jNopVersion = "1.6.4"
+
+  val scoptVersion = "3.7.1"
+
+  val typesafeLoggingVersion = "3.9.2"
 }

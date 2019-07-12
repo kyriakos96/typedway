@@ -7,7 +7,8 @@ case class Employee(employee_id: Long,
                     name: String,
                     birth_place: Option[String])
 
-class Employees(tag: Tag) extends Table[Employee](tag, "employees") {
+class Employees(tag: Tag)
+    extends Table[Employee](tag, Some("test_schema"), "employees") {
   val employee_id = column[Long]("employee_id", O.PrimaryKey, O.AutoInc)
   val name = column[String]("name")
   val birth_place = column[Option[String]]("birth_place")
@@ -18,6 +19,7 @@ class Employees(tag: Tag) extends Table[Employee](tag, "employees") {
 }
 
 object V1561965022__employees extends DbMigrations {
+
   val employeesTable = TableQuery[Employees]
 
   implicit val dialect: MySQLDialect = new MySQLDialect
